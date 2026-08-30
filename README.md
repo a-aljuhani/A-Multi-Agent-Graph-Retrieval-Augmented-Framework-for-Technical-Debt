@@ -108,6 +108,3 @@ The abstract interfaces in `pipeline.py` represent five components:
 - `pipeline.py` documents component inputs, outputs, authority, and execution order without implementing models or database access.
 - `frozen-settings.example.yaml` records the non-secret frozen retrieval and evidence settings using model placeholders for local reimplementation.
 
-
-
-This repository is an architectural abstraction, not the private executable research system.
