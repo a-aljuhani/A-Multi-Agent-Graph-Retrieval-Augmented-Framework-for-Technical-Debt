@@ -1,0 +1,27 @@
+study:
+  fold: 2
+  split_unit: project
+  evidence_corpus: train_only
+
+retrieval:
+  full_text: neo4j_or_terms
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  embedding_revision: 1110a243fdf4706b3f48f1d95db1a4f5529b4d41
+  similarity: cosine
+  component_depth: 20
+  fusion: reciprocal_rank_fusion
+  rrf_constant: 60
+  cue_support_minimum: 100
+  cue_lambda: 1.0
+
+evidence:
+  supportive_maximum: 3
+  opposite_maximum: 2
+
+agents:
+  binary_detector: PROVIDE_MODEL_LOCALLY
+  category_classifier: PROVIDE_MODEL_LOCALLY
+  explanation_agent: PROVIDE_MODEL_LOCALLY
+  recommendation_agent: PROVIDE_MODEL_LOCALLY
+  downstream_agents_may_change_labels: false
+
