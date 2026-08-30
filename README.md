@@ -1,8 +1,8 @@
 # A Multi-Agent Graph Retrieval-Augmented Framework for Technical Debt
 
-This repository provides a compact, implementation-neutral abstraction of a research framework for detecting self-admitted technical debt (SATD), classifying its type, retrieving supporting and opposing evidence from a Neo4j graph, and generating evidence-grounded explanations and recommendations.
+This repository provides a compact, implementatio of a research framework for detecting self-admitted technical debt (SATD), classifying its type, retrieving supporting and opposing evidence from a Neo4j graph, and generating evidence-grounded explanations and recommendations.
 
-It is intended for architecture review and independent reimplementation. It does not contain the private research database, original pipeline, prompts, model weights, embeddings, predictions, API credentials, or dataset records.
+It is intended for architecture review and independent reimplementation. 
 
 ## Research objective
 
@@ -102,15 +102,12 @@ The abstract interfaces in `pipeline.py` represent five components:
 .
 |-- README.md
 |-- pipeline.py
-`-- config/
-    `-- frozen-settings.example.yaml
-```
+|-- frozen-settings.example.yaml
+
 
 - `pipeline.py` documents component inputs, outputs, authority, and execution order without implementing models or database access.
-- `config/frozen-settings.example.yaml` records the non-secret frozen retrieval and evidence settings using model placeholders for local reimplementation.
+- `frozen-settings.example.yaml` records the non-secret frozen retrieval and evidence settings using model placeholders for local reimplementation.
 
-## Reimplementation and privacy
 
-Researchers wishing to reproduce the framework must obtain the source datasets under their original terms, create their own project-disjoint split, construct a local training-only graph, and supply their own models and credentials. No credential should be written into the configuration file or committed to version control.
 
 This repository is an architectural abstraction, not the private executable research system.
