@@ -1,110 +1,192 @@
-# A Multi-Agent Graph Retrieval-Augmented Framework for Technical Debt
+# GraphRAG-grounded multi-agent reasoning for explainable self-admitted technical debt analysis
 
-This repository provides a compact, implementatio of a research framework for detecting self-admitted technical debt (SATD), classifying its type, retrieving supporting and opposing evidence from a Neo4j graph, and generating evidence-grounded explanations and recommendations.
+A self-contained, reviewer-checkable implementation of the Self-Admitted
+Technical Debt (SATD) evidence-graph pipeline described in the accompanying
+paper. It detects SATD, classifies its type, retrieves supporting and opposing
+evidence from a Neo4j graph built only from training data, and generates
+evidence-grounded explanations and recommendations.
 
-It is intended for architecture review and independent reimplementation. 
+The retrieval math, cue reranking, agent prompts, and metrics implement exactly
+the configuration used to produce the reported results. Every frozen numeric
+constant is read from `frozen-settings.yaml` at runtime; changing a value there
+changes the program's behavior on the next run. The repository is fully
+self-contained and contains no API keys, model weights, or dataset rows.
 
-## Research objective
+## What this is
 
-The framework investigates whether a leakage-safe, project-disjoint evidence graph can make SATD analysis more traceable by combining specialized classifiers with retrieval-grounded explanation and recommendation agents.
-
-## Pipeline overview
-
-```text
-Raw software artifact
-        |
-        v
-Binary Detection Agent --------> SATD / non-SATD
-        |
-        +-- if SATD -----------> Category Agent
-        |                        design | defect | requirement |
-        |                        documentation | test
-        v
-Training-only GraphRAG retrieval
-  full text + vector search + high-support cue reranking
-        |
-        v
-Evidence package
-  supportive examples + opposite-binary examples + lexical cues
-        |
-        +----------------------> Explanation Agent
-        |
-        +-- if SATD -----------> Recommendation Agent
-```
-
-The Explanation and Recommendation Agents consume frozen predictions. They provide context and guidance but cannot change the binary decision or SATD category.
-
-## Leakage-safe evaluation design
-
-The study uses a project-disjoint Fold 2 of the Li/Maldonado multi-source Java SATD dataset:
-
-| Split | Projects | Artifacts | Purpose |
-|---|---:|---:|---|
-| Train | 82 | 49,424 | Model development, graph construction, and evidence corpus |
-| Validation | 18 | 10,589 | Architecture selection and ablation studies |
-| Test | 16 | 10,590 | Locked final evaluation |
-
-Each of the 116 projects occurs in exactly one split. Only training artifacts may become graph nodes or retrieved evidence. Validation and test artifacts are passed as external queries, and their labels are unavailable during retrieval and inference.
-
-## Evidence graph composition
-
-| Element | Count |
-|---|---:|
-| Artifact nodes | 49,424 |
-| Project nodes | 82 |
-| Category nodes | 6 |
-| Source-type nodes | 4 |
-| Issue-thread nodes | 2,354 |
-| Pull-request-thread nodes | 3,052 |
-| Lexical-cue nodes | 923 |
-| **Total nodes** | **55,845** |
-| `FROM_PROJECT` relationships | 49,424 |
-| `HAS_SOURCE_TYPE` relationships | 49,424 |
-| `LABELED_AS` relationships | 49,424 |
-| Issue `PART_OF_THREAD` relationships | 15,150 |
-| Pull-request `PART_OF_THREAD` relationships | 3,129 |
-| `CONTAINS_CUE` relationships | 300,217 |
-| **Total relationships** | **466,768** |
-
-Thread identifiers are parsed exactly and scoped by project. Category relationships store training metadata but are not used as a category-sharing retrieval shortcut. Thread expansion was rejected by validation ablation, and semantic-similarity edges were not used in the final architecture.
-
-## Frozen retrieval abstraction
-
-The selected retrieval configuration has three stages:
-
-1. **Full-text retrieval:** Neo4j full-text search over artifact text using lowercased, escaped, OR-connected Lucene terms.
-2. **Vector retrieval:** `sentence-transformers/all-MiniLM-L6-v2`, revision `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`, with 384-dimensional L2-normalized embeddings and cosine similarity.
-3. **Hybrid cue reranking:** equal-weight reciprocal-rank fusion with constant 60 combines the top 20 lexical and vector candidates. `hybrid_cue_rerank_w100` then reranks only this candidate set using training-derived unigram and bigram cues with support at least 100 and `lambda=1.0`.
-
-```text
-final_score(query, document)
-  = rrf_score(query, document)
-  + (1.0 / 61) * weighted_cue_jaccard(query_cues, document_cues)
-```
-
-Cue statistics are derived only from Fold-2 training labels. Cue reranking does not introduce new candidates, traverse category nodes, or use validation/test labels, project priors, or source priors.
-
-## Evidence and agent interfaces
-
-For each query, the retrieval layer forms an evidence package containing up to three training examples matching the predicted binary side and up to two examples representing the opposite side. Matching high-support lexical cues are attached to the evidence.
-
-The abstract interfaces in `pipeline.py` represent five components:
-
-- **Binary Detection Agent:** predicts SATD or non-SATD from raw text.
-- **Category Agent:** assigns design, defect, requirement, documentation, or test when SATD is predicted.
-- **Training-only Retriever:** returns supportive and opposite-binary graph evidence.
-- **Explanation Agent:** reports whether the frozen decision is supported, challenged, or insufficiently supported and cites supplied evidence.
-- **Recommendation Agent:** returns a priority, suggested remediation, rationale, and evidence references for predicted SATD.
+- **Is**: the GraphRAG retrieval pipeline (full-text + vector + reciprocal-rank
+  fusion + high-support cue reranking), the evidence-package composition, the
+  explanation and recommendation agent prompts and validators, and the metrics
+  used to report results (macro-F1, per-class precision/recall/F1, confusion
+  matrix).
+-  You supply your own SQLite database (see
+  [Expected SQLite schema](#expected-sqlite-schema)), your own Neo4j instance,
+  your own API keys, and your own fine-tuned classifier model IDs (or retrain
+  them — see [Reproducing the classifiers](#reproducing-the-classifiers)).
 
 ## Repository contents
 
 ```text
-.
-|-- README.md
-|-- pipeline.py
-|-- frozen-settings.example.yaml
+pipeline.py                  # all pipeline logic + CLI (build-graph / run / evaluate / prepare-finetune-data)
+prompts.py                   # verbatim agent prompt templates
+frozen-settings.example.yaml # frozen constants + model-id placeholders (copy to frozen-settings.yaml)
+requirements.txt             # pinned dependencies
+```
 
+## Pipeline overview
 
-- `pipeline.py` documents component inputs, outputs, authority, and execution order without implementing models or database access.
-- `frozen-settings.example.yaml` records the non-secret frozen retrieval and evidence settings using model placeholders for local reimplementation.
+```text
+Raw artifact text
+    |
+    v
+Binary Detection Agent (fine-tuned OpenAI model)  -> SATD / non-SATD
+    |
+    +-- if SATD --> Category Agent (fine-tuned OpenAI model) --> one of 5 categories
+    |
+    v
+GraphRAG retrieval over Neo4j (TRAINING split only)
+  full-text (Lucene OR-query) + MiniLM vector search -> Reciprocal Rank Fusion
+  -> high-support lexical-cue reranking
+    |
+    v
+Evidence package (up to 3 supportive + 2 opposite training examples, plus matching cues)
+    |
+    +--> Explanation Agent (DeepSeek)     -- cannot change the frozen label
+    +--> Recommendation Agent (DeepSeek)  -- cannot change the frozen label/category
+```
+
+## Dataset
+
+The pipeline is evaluated on the publicly available multi-source SATD dataset of
+Li et al. (2023), which aggregates SATD from four artifact sources (source code
+comments, commit messages, pull requests, and issue trackers) across 103
+open-source Java projects. The five-type SATD taxonomy (design, defect,
+requirement, documentation, test) follows Maldonado & Shihab (2015).
+
+- Source: https://github.com/yikun-li/satd-different-sources-data
+- Li, Y., Soliman, M., & Avgeriou, P. (2023). *Automatic identification of
+  self-admitted technical debt from four different sources.* Empirical Software
+  Engineering, 28(3), 65. https://doi.org/10.1007/s10664-023-10297-9
+
+No dataset rows are distributed here. You build the SQLite database yourself from
+the public dataset, using the project-disjoint Fold-2 split (82 train / 18 val /
+16 test projects; 49,424 / 10,589 / 10,590 artifacts).
+
+## Requirements
+
+```
+pip install -r requirements.txt
+```
+
+You also need:
+- A running Neo4j instance (5.13+ / 5.x with vector-index support), reachable via
+  `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD` / `NEO4J_DATABASE`.
+- An `OPENAI_API_KEY` (for the binary and category fine-tuned classifiers).
+- A `DEEPSEEK_API_KEY` (for the explanation and recommendation agents).
+- Your own SQLite database matching the schema below.
+
+Put credentials in a local `.env` file (never committed):
+
+```
+OPENAI_API_KEY=...
+DEEPSEEK_API_KEY=...
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=...
+NEO4J_DATABASE=neo4j
+```
+
+## Frozen settings
+
+Copy `frozen-settings.example.yaml` to `frozen-settings.yaml` and fill in your
+own fine-tuned model IDs. **Every** frozen constant used by the pipeline (RRF
+`k`, retrieval depths, cue support threshold, cue rerank lambda/denominator,
+embedding model + revision + similarity, evidence-package composition,
+retry/backoff policy, batch sizes) is read from this file at runtime — none of
+it is hardcoded in `pipeline.py`.
+
+## Expected SQLite schema
+
+`pipeline.py` expects a SQLite database with (at minimum) these tables:
+
+- `samples(sample_id, project_id, raw_text, source_type, language, external_ref, ground_truth_binary, ground_truth_category, dataset_id)`
+- `splits(sample_id, fold, split)` — `split` in `{train, val, test}`
+- `projects(project_id, project_name, language)`
+- `satd_categories(category_id, name, definition, taxonomy_source)`
+
+This mirrors the project-disjoint Fold-2 split described under [Dataset](#dataset).
+No dataset rows are included in this release.
+
+## CLI usage
+
+```
+# 1. Build the training-only evidence graph (nodes, embeddings, vector + full-text
+#    indexes, and the high-support cue layer). Run once per graph version.
+python pipeline.py build-graph --db path/to/research.sqlite3 --settings frozen-settings.yaml
+
+# 2. Classify + explain + recommend for a single artifact or a JSONL file.
+python pipeline.py run --db path/to/research.sqlite3 --settings frozen-settings.yaml --query "TODO: fix this hack later"
+python pipeline.py run --db path/to/research.sqlite3 --settings frozen-settings.yaml --queries-file queries.jsonl --output results.json
+
+# 3. Evaluate on a held-out split and write metrics.
+python pipeline.py evaluate --db path/to/research.sqlite3 --settings frozen-settings.yaml --split test --output metrics.json
+
+# 4. Build the balanced binary fine-tuning JSONL from the Fold-2 TRAIN split.
+python pipeline.py prepare-finetune-data --db path/to/research.sqlite3 --settings frozen-settings.yaml --output finetune_binary.jsonl
+```
+
+`build-graph` creates the vector and full-text indexes; on a fresh Neo4j they
+populate asynchronously, so allow them to come online before running `evaluate`.
+
+## Reproducing the classifiers
+
+The binary detection and category classification agents are **fine-tuned OpenAI
+models**. Their model IDs are account-specific and are not distributed here:
+`frozen-settings.yaml` ships with placeholder values that `run` and `evaluate`
+refuse to execute with. Retrain equivalents as follows.
+
+### Base model and hyperparameters
+
+- **Base model**: `gpt-4.1-mini-2025-04-14` (OpenAI fine-tuning API).
+- **Binary detector fine-tune**: 2 epochs, batch size 14, ~2.87M trained tokens.
+  These are the hyperparameters used to produce the reported binary detection
+  results; OpenAI auto-selects a learning-rate multiplier unless overridden, and
+  it was not overridden.
+- **Category classifier fine-tune**: use the binary detector's hyperparameters as
+  a starting point and report whatever you settle on, for full reproducibility of
+  your own run.
+
+### Building the fine-tuning data from Fold-2 TRAIN
+
+`pipeline.py prepare-finetune-data` builds the **binary** JSONL:
+
+1. Take every SATD (`ground_truth_binary=1`) artifact in Fold-2 TRAIN.
+2. Sample an equal number of non-SATD artifacts using minimum-one-then-
+   largest-remainder proportional allocation stratified by
+   `(project_id, source_type)`, with a fixed seed (`finetune_data.seed`), so
+   every non-empty project/source stratum in TRAIN is represented and the
+   sample is deterministic.
+3. Shuffle the combined set with the same seed.
+4. Emit one OpenAI chat-format JSONL record per artifact: `system` = the exact
+   binary-detector system prompt (`prompts.BINARY_SYSTEM`), `user` = the raw
+   artifact text, `assistant` = `{"is_satd": true|false}`.
+
+The **category** JSONL is built analogously over the SATD-labeled artifacts of
+Fold-2 TRAIN: `system` = `prompts.CATEGORY_SYSTEM`, `user` = the raw artifact
+text, `assistant` = `{"category": "<ground-truth category>"}`.
+
+### Fine-tuning and wiring it up
+
+1. Upload the JSONL and launch an OpenAI fine-tuning job against
+   `gpt-4.1-mini-2025-04-14`.
+2. Paste the resulting `ft:...` model IDs into `frozen-settings.yaml` under
+   `models.binary_detector.model_id` and `models.category_classifier.model_id`.
+3. Run `pipeline.py evaluate --split val` to check your reproduction against your
+   own labels before running `--split test`.
+
+## Metrics
+
+`evaluate` reports six-class macro-F1 (the primary metric, given the ~11% SATD
+class prevalence), per-class precision/recall/F1, a confusion matrix, and binary
+(SATD vs. non-SATD) accuracy/F1.
 
