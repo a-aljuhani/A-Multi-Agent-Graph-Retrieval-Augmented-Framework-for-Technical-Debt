@@ -1,27 +1,114 @@
-study:
+# Frozen configuration for the SATD Evidence-Graph pipeline.
+#
+# Every numeric threshold, model identifier, index name, and structural
+# constant used by pipeline.py is read from this file at runtime -- nothing
+# of this kind is hardcoded in the code. Changing a value here changes the
+# program's behavior on the next run.
+#
+# Copy this file to frozen-settings.yaml and fill in the placeholders before
+# running `pipeline.py`. Do not commit a filled-in copy containing real
+# credentials or private model IDs to a public repository (there are none in
+# this file by design -- API keys come from environment variables only).
+
+dataset:
+  # Dataset/fold identifiers in the reviewer's own SQLite database, matching
+  # the schema in README.md (samples, splits, projects, satd_categories).
+  dataset_id: 1
   fold: 2
-  split_unit: project
-  evidence_corpus: train_only
+  train_split: "train"
+  val_split: "val"
+  test_split: "test"
+
+neo4j:
+  # Namespaces all nodes/relationships written by build-graph so multiple
+  # graph versions can coexist in the same Neo4j database.
+  graph_version: "maldonado_li_fold2_v1"
+  cue_graph_version: "maldonado_li_fold2_cues_v1"
+  vector_index_name: "satd_artifact_embedding_vector_v1"
+  fulltext_index_name: "satd_artifact_raw_text_fulltext"
+  # Connection host/user/password/database come from env vars:
+  # NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, NEO4J_DATABASE.
+  build_batch_size: 500
+  retrieval_batch_size: 500
+
+embedding:
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  # Exact upstream revision hash used for the reported results.
+  model_revision: "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+  dim: 384
+  normalize: true
+  # Similarity function for the Neo4j vector index (embeddings are L2-normalized,
+  # so cosine ranks identically to dot product).
+  similarity: "cosine"
+  encode_batch_size: 64
 
 retrieval:
-  full_text: neo4j_or_terms
-  embedding_model: sentence-transformers/all-MiniLM-L6-v2
-  embedding_revision: 1110a243fdf4706b3f48f1d95db1a4f5529b4d41
-  similarity: cosine
+  # Reciprocal Rank Fusion constant for combining full-text and vector rankings.
+  rrf_k: 60
+  # Depth retained from each individual retrieval component before fusion.
   component_depth: 20
-  fusion: reciprocal_rank_fusion
-  rrf_constant: 60
-  cue_support_minimum: 100
+  # Depth retained after RRF fusion and after cue reranking.
+  ranking_depth: 20
+  # Minimum training-set support (# artifacts containing the cue) required for
+  # a lexical cue to be eligible for the cue graph / reranking.
+  cue_support_threshold: 100
+  # Weight applied to the cue-similarity term in the final reranked score.
   cue_lambda: 1.0
+  # Denominator applied to the weighted cue-Jaccard term:
+  # final_score = rrf_score + cue_lambda * weighted_cue_jaccard / cue_denominator
+  cue_denominator: 61.0
+  # Evidence package composition ("up to 3 supportive + 2 opposite" examples).
+  evidence_package:
+    satd_count_when_predicted_satd: 3
+    non_satd_count_when_predicted_satd: 2
+    satd_count_when_predicted_non_satd: 2
+    non_satd_count_when_predicted_non_satd: 3
 
-evidence:
-  supportive_maximum: 3
-  opposite_maximum: 2
+labels:
+  six_class: ["non_satd", "design", "defect", "requirement", "documentation", "test"]
+  satd_categories: ["design", "defect", "requirement", "documentation", "test"]
 
-agents:
-  binary_detector: PROVIDE_MODEL_LOCALLY
-  category_classifier: PROVIDE_MODEL_LOCALLY
-  explanation_agent: PROVIDE_MODEL_LOCALLY
-  recommendation_agent: PROVIDE_MODEL_LOCALLY
-  downstream_agents_may_change_labels: false
+models:
+  # The binary detector and category classifier are fine-tuned OpenAI models.
+  # These IDs are organization-private and are NOT included with this release.
+  # See README.md "Reproducing the classifiers" for how to retrain equivalents
+  # from the Fold-2 training split, then paste your own fine-tuned model IDs
+  # below. `run` and `evaluate` will refuse to start with the placeholder values.
+  binary_detector:
+    provider: "openai"
+    base_model: "gpt-4.1-mini-2025-04-14"
+    model_id: "REPLACE_WITH_YOUR_FINE_TUNED_BINARY_MODEL_ID"
+    temperature: 0
+    max_tokens: 20
+  category_classifier:
+    provider: "openai"
+    base_model: "gpt-4.1-mini-2025-04-14"
+    model_id: "REPLACE_WITH_YOUR_FINE_TUNED_CATEGORY_MODEL_ID"
+    temperature: 0
+    max_tokens: 20
+  explanation_agent:
+    provider: "deepseek"
+    model_id: "deepseek-v4-pro"
+    base_url: "https://api.deepseek.com"
+    temperature: 0
+    top_p: 1
+    max_tokens: 384
+  recommendation_agent:
+    provider: "deepseek"
+    model_id: "deepseek-v4-pro"
+    base_url: "https://api.deepseek.com"
+    temperature: 0
+    top_p: 1
+    max_tokens: 384
 
+execution:
+  max_attempts: 3
+  retry_backoff_seconds: [2, 8]
+  request_timeout_seconds: 180
+  concurrency: 8
+
+finetune_data:
+  # Used by `pipeline.py prepare-finetune-data` to build the binary fine-tuning
+  # JSONL. See README.md for how the category fine-tuning data is built analogously.
+  seed: 42
+  balance: "50_50_satd_non_satd"
