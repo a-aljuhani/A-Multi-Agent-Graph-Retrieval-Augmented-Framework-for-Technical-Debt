@@ -559,30 +559,6 @@ Several controls are implemented to preserve experimental validity:
 - Evidence identifiers are preserved for provenance and traceability.
 - Fixed experimental configuration is used for final test evaluation.
 
----
-
-## 13. Hardware Used in the Study
-
-The reported experiments were conducted on a:
-
-- HUAWEI MCLG-XX laptop
-- Windows 11 Home 64-bit
-- Intel Core i9-13900H
-- 14 CPU cores / 20 threads
-- 16 GB RAM
-- Intel Iris Xe integrated graphics
-
-No CUDA-enabled NVIDIA GPU was used locally.
-
-Local computation was used for:
-
-- data preprocessing,
-- graph construction,
-- graph operations,
-- retrieval experiments, and
-- classical machine-learning analysis.
-
-OpenAI and DeepSeek inference was performed using infrastructure provided by the respective model providers.
 
 ---
 
@@ -596,52 +572,10 @@ The repository provides the implementation, configuration information, dataset r
 
 ---
 
-## 15. Citation
-
-If you use this repository, dataset preparation procedure, or framework in academic work, please cite the associated manuscript:
-
-```bibtex
-@article{alhubaishy_graphRAG_satd,
-  title   = {GraphRAG-grounded multi-agent reasoning for explainable self-admitted technical debt analysis},
-  author  = {Alhubaishy, Abdulaziz and Aljuhani, Abdulmajeed},
-  journal = {PeerJ Computer Science},
-  year    = {2026},
-  note    = {Manuscript under review}
-}
-```
-
-Please also cite the third-party dataset:
-
-```bibtex
-@article{li2023automatic,
-  title   = {Automatic identification of self-admitted technical debt from four different sources},
-  author  = {Li, Yikun and Soliman, Mohamed and Avgeriou, Paris},
-  journal = {Empirical Software Engineering},
-  volume  = {28},
-  number  = {3},
-  pages   = {65},
-  year    = {2023},
-  doi     = {10.1007/s10664-023-10297-9}
-}
-```
-
-Dataset:
-
-https://github.com/yikun-li/satd-different-sources-data
-
-DOI:
-
-https://doi.org/10.1007/s10664-023-10297-9
-
----
 
 ## 16. License
 
 This repository is provided for academic research and reproducibility purposes.
-
-Third-party datasets remain subject to the licenses and terms specified by their original authors and repositories and are **not redistributed here**.
-
-If a separate `LICENSE` file is included in this repository, use and redistribution of the implementation code are governed by that license.
 
 ---
 
