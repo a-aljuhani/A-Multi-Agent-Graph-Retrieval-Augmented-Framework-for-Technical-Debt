@@ -145,6 +145,28 @@ The repository contains the implementation required to reproduce the main experi
 Configuration files are provided to document the settings used in the reported experiments.
 
 ---
+## Running the Pipeline
+
+1. Clone the repository and install dependencies
+
+```bash
+git clone https://github.com/a-aljuhani/A-Multi-Agent-Graph-Retrieval-Augmented-Framework-for-Technical-Debt.git
+cd A-Multi-Agent-Graph-Retrieval-Augmented-Framework-for-Technical-Debt
+pip install -r requirements.txt
+
+2.Prepare the data : Download the public SATD datasets and build the local SQLite database using the Fold-2 project-disjoint split.
+3.Configure the environment: Configure Neo4j and set the required OpenAI and DeepSeek API credentials.
+4.Run the framework: Run the pipeline in the following order:
+→ Classification
+→ Graph construction
+→ Hybrid retrieval and reranking
+→ Evidence packaging
+→ Explanation generation
+→ Recommendation generation
+→ Evaluation
+Use the provided frozen configuration files to reproduce the reported results.
+---
+
 
 ## 5. Methodology
 
@@ -543,9 +565,6 @@ https://doi.org/10.1007/s10664-023-10297-9
 
 This repository is provided for academic research and reproducibility purposes.
 
-Third-party datasets remain subject to the licenses and terms specified by their original authors and repositories and are **not redistributed here**.
-
-If a separate `LICENSE` file is included in this repository, use and redistribution of the implementation code are governed by that license.
 
 ---
 
