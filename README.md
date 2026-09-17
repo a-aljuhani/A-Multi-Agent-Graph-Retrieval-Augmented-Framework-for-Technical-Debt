@@ -53,11 +53,11 @@ The dataset contains SATD examples from four types of software-development artif
 - Issue trackers
 - Pull requests
 
-### Dataset source
+### Dataset Source
 
 https://github.com/yikun-li/satd-different-sources-data
 
-### Dataset publication
+### Dataset Publication
 
 Li, Y., Soliman, M., & Avgeriou, P. (2023).  
 *Automatic identification of self-admitted technical debt from four different sources.*  
@@ -71,7 +71,7 @@ The source-code-comment component originates from the SATD dataset of Maldonado 
 
 https://github.com/maldonado/tse.satd.data
 
-### Important note about third-party data
+### Important Note About Third-Party Data
 
 **No third-party dataset rows are redistributed in this repository.**
 
@@ -145,30 +145,33 @@ The repository contains the implementation required to reproduce the main experi
 Configuration files are provided to document the settings used in the reported experiments.
 
 ---
-## Running the Pipeline
 
-1. Clone the repository and install dependencies
+## 5. Running the Pipeline
+
+1. **Clone the repository and install dependencies**
 
 ```bash
 git clone https://github.com/a-aljuhani/A-Multi-Agent-Graph-Retrieval-Augmented-Framework-for-Technical-Debt.git
 cd A-Multi-Agent-Graph-Retrieval-Augmented-Framework-for-Technical-Debt
 pip install -r requirements.txt
+```
 
-2.Prepare the data : Download the public SATD datasets and build the local SQLite database using the Fold-2 project-disjoint split.
-3.Configure the environment: Configure Neo4j and set the required OpenAI and DeepSeek API credentials.
-4.Run the framework: Run the pipeline in the following order:
-→ Classification
-→ Graph construction
-→ Hybrid retrieval and reranking
-→ Evidence packaging
-→ Explanation generation
-→ Recommendation generation
-→ Evaluation
+2. **Prepare the data**  
+   Download the public SATD datasets and build the local SQLite database using the Fold-2 project-disjoint split.
+
+3. **Configure the environment**  
+   Configure Neo4j and set the required OpenAI and DeepSeek API credentials.
+
+4. **Run the framework**  
+   Run the pipeline in the following order:
+
+**Classification → Graph construction → Hybrid retrieval and reranking → Evidence packaging → Explanation generation → Recommendation generation → Evaluation**
+
 Use the provided frozen configuration files to reproduce the reported results.
+
 ---
 
-
-## 5. Methodology
+## 6. Methodology
 
 ### Step 1 — Dataset Preparation
 
@@ -355,7 +358,7 @@ The agent is instructed to avoid unsupported assumptions when implementation det
 
 ---
 
-## 6. Frozen Experimental Configuration
+## 7. Frozen Experimental Configuration
 
 The final architecture evaluated on the locked test set is:
 
@@ -368,7 +371,7 @@ The final architecture evaluated on the locked test set is:
 | Recommendation | DeepSeek V4 Pro |
 | Independent quality judge | GPT-5.4 |
 
-### Detection and Category inference
+### Detection and Category Inference
 
 ```text
 Temperature = 0
@@ -386,7 +389,7 @@ Maximum output = 384 tokens
 
 ---
 
-## 7. Requirements
+## 8. Requirements
 
 The experiments reported in the study used the following environment:
 
@@ -412,7 +415,7 @@ A local Neo4j instance is required for graph construction and retrieval.
 
 ---
 
-## 8. External Model/API Requirements
+## 9. External Model/API Requirements
 
 Some stages of the experimental pipeline use externally hosted language models.
 
@@ -429,7 +432,7 @@ Set the required credentials through environment variables or the configuration 
 
 ---
 
-## 9. Reproduction Workflow
+## 10. Reproduction Workflow
 
 A full reproduction follows this general order:
 
@@ -476,7 +479,7 @@ The locked test partition should not be used for model selection or configuratio
 
 ---
 
-## 10. Evaluation
+## 11. Evaluation
 
 ### Classification Evaluation
 
@@ -538,10 +541,52 @@ The generated outputs are evaluated post hoc using an independent model.
 
 Deterministic checks are additionally used for evidence-reference validity and output consistency.
 
+---
+
+## 12. Reproducibility and Data Leakage Controls
+
+Several controls are implemented to preserve experimental validity:
+
+- Project-disjoint train/validation/test partitions.
+- Evidence graph constructed from training artifacts only.
+- No validation artifacts in the evidence graph.
+- No test artifacts in the evidence graph.
+- Lexical cues derived from training data only.
+- Validation data used for architecture/component selection.
+- Test data accessed only after the architecture is frozen.
+- Classification results are frozen before GraphRAG reasoning.
+- Retrieved evidence cannot modify the classifier prediction.
+- Evidence identifiers are preserved for provenance and traceability.
+- Fixed experimental configuration is used for final test evaluation.
 
 ---
 
-## 13. Repository and Code Availability
+## 13. Hardware Used in the Study
+
+The reported experiments were conducted on a:
+
+- HUAWEI MCLG-XX laptop
+- Windows 11 Home 64-bit
+- Intel Core i9-13900H
+- 14 CPU cores / 20 threads
+- 16 GB RAM
+- Intel Iris Xe integrated graphics
+
+No CUDA-enabled NVIDIA GPU was used locally.
+
+Local computation was used for:
+
+- data preprocessing,
+- graph construction,
+- graph operations,
+- retrieval experiments, and
+- classical machine-learning analysis.
+
+OpenAI and DeepSeek inference was performed using infrastructure provided by the respective model providers.
+
+---
+
+## 14. Repository and Code Availability
 
 The implementation and reproducibility materials are publicly available at:
 
@@ -550,6 +595,35 @@ https://github.com/a-aljuhani/A-Multi-Agent-Graph-Retrieval-Augmented-Framework-
 The repository provides the implementation, configuration information, dataset references, software requirements, and instructions required to reproduce the principal experimental pipeline.
 
 ---
+
+## 15. Citation
+
+If you use this repository, dataset preparation procedure, or framework in academic work, please cite the associated manuscript:
+
+```bibtex
+@article{alhubaishy_graphRAG_satd,
+  title   = {GraphRAG-grounded multi-agent reasoning for explainable self-admitted technical debt analysis},
+  author  = {Alhubaishy, Abdulaziz and Aljuhani, Abdulmajeed},
+  journal = {PeerJ Computer Science},
+  year    = {2026},
+  note    = {Manuscript under review}
+}
+```
+
+Please also cite the third-party dataset:
+
+```bibtex
+@article{li2023automatic,
+  title   = {Automatic identification of self-admitted technical debt from four different sources},
+  author  = {Li, Yikun and Soliman, Mohamed and Avgeriou, Paris},
+  journal = {Empirical Software Engineering},
+  volume  = {28},
+  number  = {3},
+  pages   = {65},
+  year    = {2023},
+  doi     = {10.1007/s10664-023-10297-9}
+}
+```
 
 Dataset:
 
@@ -561,14 +635,17 @@ https://doi.org/10.1007/s10664-023-10297-9
 
 ---
 
-## 15. License
+## 16. License
 
 This repository is provided for academic research and reproducibility purposes.
 
+Third-party datasets remain subject to the licenses and terms specified by their original authors and repositories and are **not redistributed here**.
+
+If a separate `LICENSE` file is included in this repository, use and redistribution of the implementation code are governed by that license.
 
 ---
 
-## 16. Contributions
+## 17. Contributions
 
 Contributions that improve reproducibility, documentation, or implementation quality are welcome.
 
@@ -585,6 +662,6 @@ When contributing:
 
 ---
 
-## 17. Contact
+## 18. Contact
 
 For questions regarding the implementation or reproduction of the experiments, please contact the authors through the repository or the contact information provided in the associated manuscript.
