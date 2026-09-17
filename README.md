@@ -596,6 +596,8 @@ When contributing:
 
 ---
 
-## 18. Contact
+## 18. Contact and Author
+
+**Abdulaziz Alhubaishy and Abdulmajeed Aljuhani** 
 
 For questions regarding the implementation or reproduction of the experiments, please contact the authors through the repository or the contact information provided in the associated manuscript.
