@@ -146,7 +146,7 @@ Configuration files are provided to document the settings used in the reported e
 
 ---
 
-## 5. Running the Pipeline
+## 5. Usage Instructions
 
 1. **Clone the repository and install dependencies**
 
